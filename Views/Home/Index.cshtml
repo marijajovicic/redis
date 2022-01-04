@@ -1,8 +1,23 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Log in";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="d-flex vh-100">
+    <div class="position-absolute bg-dark" style="top: 0; bottom: 0; left: 0; right: 0;">
+
+    </div>
+    <div class="text-white vw-100 d-flex align-items-center justify-content-center flex-column pb-5" style="z-index: 1;">
+        <h1 class="mb-5 text-center">Welcome to Topic2Chat <br /> please log in</h1>
+
+        <form class="w-50" method="post">
+            <div class="input-group input-group-lg mb-2">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-lg">Username</span>
+                </div>
+                <input type="text" class="form-control" name="username" aria-describedby="inputGroup-sizing-sm">
+            </div>
+            <button class="btn btn-light d-block w-100 mb-5">Login</button>
+        </form>
+    </div>
 </div>
+
