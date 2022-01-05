@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "Channels";
+}
+
+<div class="mt-5 d-flex align-items-center flex-column">
+    <h1>Available Channel rooms</h1>
+
+    <form asp-action="AddChannel">
+        <div class="d-flex">
+            <input name="channelName"
+                   class="form-control me-2" type="text"
+                   placeholder="Channel Name">
+            <button class="btn btn-dark w-75 ml-2">Add channel</button>
+        </div>
+    </form>
+</div>
+
+
+<div id="chatRooms" class="row">
+    @foreach (var channels in Model)
+    {
+        <a id="@channels" class="btn btn-dark col-4 col-sm-2 m-2"
+           asp-action="Channel"
+           asp-route-channelName="@channels">
+            @channels
+        </a>
+    }
+</div>
+
+@section Scripts {
+    <script>
+
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl("channels_hub")
+            .build();
+
+        connection.on("Channels", (data) => {
+            console.log(data);
+            var url = `@Url.Action("Channel", "Home")?channelName=${data.replace(" ", '%20')}`;
+            var link = `<a id="${data}" class="btn btn-dark col-4 col-sm-2 mt-2"
+                            href=${url}>
+                        ${data}
+                        </a>`;
+            $("#chatRooms").append(link);
+        });
+
+        connection.start().catch((err) => {
+            console.log(err);
+        }); 
+    </script> 
+}
+
+
+

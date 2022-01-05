@@ -45,13 +45,13 @@ namespace redis.Controllers
                 return View();
 
             var listOfSelectedUsernames = await _redis.GetDatabase().ListRangeAsync(_usernameRedisKeys);
-            if (listOfSelectedUsernames.Contains(username));
+            if (listOfSelectedUsernames.Contains(username))
                 return View();
 
             await _redis.GetDatabase().ListRightPushAsync(_usernameRedisKeys, username);
             HttpContext.Session.SetString(_usernameSessionKey, username); 
 
-            return View();
+            return RedirectToAction("Channels");
         }
 
         public async Task<IActionResult> Channels()
@@ -75,6 +75,7 @@ namespace redis.Controllers
                 await _redis.GetSubscriber().PublishAsync(previousChannel, message);
             }
 
+            var t = await _redis.GetDatabase().ListRangeAsync(_channelsRedisKeys);
             IList<string> channels = (await _redis.GetDatabase().ListRangeAsync(_channelsRedisKeys))
                 .Select(c => c.ToString())
                 .ToList() ?? new List<string>();
@@ -94,10 +95,38 @@ namespace redis.Controllers
             if (string.IsNullOrEmpty(channelName) || channels.Contains(channelName))
                 return RedirectToAction("Channels");
 
-            await _redis.GetDatabase().ListRightPushAsync(_channelsRedisKeys, channels);
+            await _redis.GetDatabase().ListRightPushAsync(_channelsRedisKeys, channelName);
+            var t = await _redis.GetDatabase().ListRangeAsync(_channelsRedisKeys);
             await _redis.GetSubscriber().PublishAsync(RedisHelper.ChannelsKey, channelName);
 
             return RedirectToAction("Channels");
+        }
+
+        public async Task<IActionResult> Channel(string channelName)
+        {
+            string username = HttpContext.Session.GetString(_usernameSessionKey);
+            if(string.IsNullOrWhiteSpace(username))
+                return RedirectToAction("Index"); 
+
+           channelName = channelName.Trim().ToLower();
+            var channels = await _redis.GetDatabase().ListRangeAsync(_channelsRedisKeys);
+            if (!channels.Contains(channelName))
+                return RedirectToAction("Channels");
+
+            RedisHelper.SubscribeToChannel(_redis, channelName, username, _hub);
+            HttpContext.Session.SetString(_currentChannelSessionKey, channelName);
+
+            var message = new
+            {
+                MessageContent = "This user has joined this chat",
+                User = username
+            };
+
+            string jsonMessage = JsonConvert.SerializeObject(message);
+
+            await _redis.GetSubscriber().PublishAsync(channelName, jsonMessage);
+
+            return View(model: channelName);
         }
     }
 }
