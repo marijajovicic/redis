@@ -16,7 +16,7 @@ namespace redis.Helper
 
         private static bool _firstTimeRunningSubscribeToCreatedChannels = true;
         private static readonly object _lockCreatedChannels = new();
-        private static readonly Dictionary<string, List<string>> _channelsWithUsers = new();
+        private static readonly List<string> _subscribedChannels = new();
 
 
         public static readonly string ChannelsKey = "Channels";
@@ -34,19 +34,17 @@ namespace redis.Helper
             }
         }
 
-        public static void SubscribeToChannel(IConnectionMultiplexer _redis, string channelName, string username, IHubContext<ChannelHub> hub)
+        public static void SubscribeToChannel(IConnectionMultiplexer _redis, string channelName, IHubContext<ChannelHub> hub)
         {
             lock (_lockAllChatsSubscribe)
             {
-                if (_channelsWithUsers.TryGetValue(channelName, out var users))
+                if (_subscribedChannels.Any(c => c == channelName))
                 {
-                    if (users.Contains(username))
-                        return;
-                    users.Add(username.Trim().ToLower());
+                    return;
                 } 
                 else
                 {
-                    _channelsWithUsers.Add(channelName, new List<string>{ username });
+                    _subscribedChannels.Add(channelName);
                 }
 
                 _redis.GetSubscriber().Subscribe(channelName, async (redisChanel, message) =>

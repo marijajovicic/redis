@@ -66,8 +66,9 @@ namespace redis.Controllers
             {
                 var userHasLeft = new 
                 {
-                    Message = "This user has left this chat",
+                    MessageContent = "Has left channel",
                     User = username,
+                    Date = DateTime.Now.ToString("HH:mm dd/MM/yyyy"),
                 };
                 
                 string message = JsonConvert.SerializeObject(userHasLeft);
@@ -113,13 +114,14 @@ namespace redis.Controllers
             if (!channels.Contains(channelName))
                 return RedirectToAction("Channels");
 
-            RedisHelper.SubscribeToChannel(_redis, channelName, username, _hub);
+            RedisHelper.SubscribeToChannel(_redis, channelName, _hub);
             HttpContext.Session.SetString(_currentChannelSessionKey, channelName);
 
             var message = new
             {
-                MessageContent = "This user has joined this chat",
-                User = username
+                MessageContent = "Has joined channel",
+                User = username,
+                Date = DateTime.Now.ToString("HH:mm dd/MM/yyyy"),
             };
 
             string jsonMessage = JsonConvert.SerializeObject(message);
@@ -128,5 +130,36 @@ namespace redis.Controllers
 
             return View(model: channelName);
         }
+
+        public async Task<IActionResult> Message(string message, string channelName)
+        {
+            var username = HttpContext.Session.GetString(_usernameSessionKey);
+            if(string.IsNullOrWhiteSpace(username))
+                return Unauthorized();
+
+            if(string.IsNullOrWhiteSpace(channelName))
+                return BadRequest();
+
+            if(string.IsNullOrWhiteSpace(message))
+                return BadRequest();
+
+            channelName = channelName.Trim().ToLower();
+            var groupChats = await _redis.GetDatabase().ListRangeAsync(_channelsRedisKeys);
+            if (!groupChats.Contains(channelName))
+                return BadRequest();
+
+            var userMessage = new
+            {
+                MessageContent = message,
+                User = username,
+                Date = DateTime.Now.ToString("HH:mm dd/MM/yyyy"),
+            };
+
+            var userMessageJson = JsonConvert.SerializeObject(userMessage);
+
+            _redis.GetSubscriber().Publish(channelName, userMessageJson);
+
+            return Ok();
+        } 
     }
 }
